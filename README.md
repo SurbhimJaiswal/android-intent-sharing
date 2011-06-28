@@ -13,9 +13,9 @@ The integration works with the standard [Android intent model][]:
 
     File myAudiofile = new File("/path/to/audio.mp3");
     Intent intent = new Intent("com.soundcloud.android.SHARE")
-        .putExtra(Intent.EXTRA_STREAM, Uri.fromFile(myAudiofile)
+        .putExtra(Intent.EXTRA_STREAM, Uri.fromFile(myAudiofile))
         .putExtra("com.soundcloud.android.extra.title", "Demo")
-        .putExtra("com.soundcloud.android.extra.description", "Testing"));
+        .putExtra("com.soundcloud.android.extra.description", "Testing");
 
     try {
        startActivityForResult(intent, 0);
