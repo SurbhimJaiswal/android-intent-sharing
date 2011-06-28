@@ -1,12 +1,24 @@
 package com.soundcloud.android.examples.intent;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.ActivityNotFoundException;
+import android.content.ContentResolver;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.Cursor;
+import android.location.Location;
+import android.location.LocationManager;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -15,25 +27,53 @@ import java.io.File;
 import java.io.IOException;
 
 public class Record extends Activity {
+    public static final String TAG = "soundcloud-intent-sharing-example";
+
     private boolean mStarted;
     private MediaRecorder mRecorder;
+    private File mArtwork;
 
+    private static boolean AAC_SUPPORTED  = Build.VERSION.SDK_INT >= 10;
+    private static final int PICK_ARTWORK = 1;
+    private static final int SHARE_SOUND  = 2;
 
-    private static final File PATH = new File("/sdcard/test.mp3");
+    private static final File FILES_PATH = new File(
+        Environment.getExternalStorageDirectory(),
+        "Android/data/com.soundcloud.android.examples/files");
+
+    private static final File RECORDING = new File(
+            FILES_PATH,
+            "demo-recording" + (AAC_SUPPORTED ? ".mp4" : "3gp"));
+
+    private static final Uri MARKET_URI = Uri.parse("market://details?id=com.soundcloud.android");
+    private static final int DIALOG_NOT_INSTALLED = 0;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (Environment.MEDIA_MOUNTED.equals(
+            Environment.getExternalStorageState())) {
+            if (!FILES_PATH.mkdirs()) {
+                Log.w(TAG, "Could not create " + FILES_PATH);
+            }
+        } else {
+            Toast.makeText(this, R.string.need_external_storage, Toast.LENGTH_LONG).show();
+            finish();
+        }
+
         setContentView(R.layout.record);
 
         final Button record_btn = (Button) findViewById(R.id.record_btn);
         final Button share_btn = (Button) findViewById(R.id.share_btn);
         final Button play_btn = (Button) findViewById(R.id.play_btn);
+        final Button artwork_btn = (Button) findViewById(R.id.artwork_btn);
 
         Record last = getLastNonConfigurationInstance();
         if (last != null) {
-            mStarted = last.mStarted;
+            mStarted  = last.mStarted;
             mRecorder = last.mRecorder;
+            mArtwork  = last.mArtwork;
             record_btn.setText(mStarted ? R.string.stop : R.string.record);
         }
 
@@ -43,7 +83,7 @@ public class Record extends Activity {
                     Toast.makeText(Record.this, R.string.recording, Toast.LENGTH_SHORT).show();
 
                     mStarted = true;
-                    mRecorder = getRecorder(PATH);
+                    mRecorder = getRecorder(RECORDING, AAC_SUPPORTED);
                     mRecorder.start();
                     record_btn.setText(R.string.stop);
                 } else {
@@ -57,6 +97,7 @@ public class Record extends Activity {
                     record_btn.setText(R.string.record);
                     share_btn.setEnabled(true);
                     play_btn.setEnabled(true);
+                    artwork_btn.setEnabled(true);
                 }
             }
         });
@@ -79,7 +120,13 @@ public class Record extends Activity {
 
         share_btn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                share();
+                shareSound();
+            }
+        });
+
+        artwork_btn.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                startActivityForResult(new Intent(Intent.ACTION_GET_CONTENT).setType("image/*"), PICK_ARTWORK);
             }
         });
     }
@@ -87,7 +134,7 @@ public class Record extends Activity {
     private void play(MediaPlayer.OnCompletionListener onCompletion) {
         MediaPlayer player = new MediaPlayer();
         try {
-            player.setDataSource(PATH.getAbsolutePath());
+            player.setDataSource(RECORDING.getAbsolutePath());
             player.prepare();
             player.setOnCompletionListener(onCompletion);
             player.start();
@@ -96,39 +143,58 @@ public class Record extends Activity {
         }
     }
 
-    private void share() {
+    private void shareSound() {
         Intent intent = new Intent("com.soundcloud.android.SHARE")
-                .putExtra(Intent.EXTRA_STREAM, Uri.fromFile(PATH))
+                .putExtra(Intent.EXTRA_STREAM, Uri.fromFile(RECORDING))
                 // here you can set metadata for the track to be uploaded
-                .putExtra("com.soundcloud.android.extra.title", "SoundCloud Demo upload")
+                .putExtra("com.soundcloud.android.extra.title", "SoundCloud Android Intent Demo upload")
                 .putExtra("com.soundcloud.android.extra.where", "Somewhere")
-                .putExtra("com.soundcloud.android.extra.public", false);
+                .putExtra("com.soundcloud.android.extra.description", "This is a demo track.")
+                .putExtra("com.soundcloud.android.extra.public", true)
+                .putExtra("com.soundcloud.android.extra.tags", new String[] { "demo", "post lolcat bluez"} )
+                .putExtra("com.soundcloud.android.extra.genre", "Easy Listening")
+                .putExtra("com.soundcloud.android.extra.location", getLocation())
+                ;
 
-        startActivityForResult(intent, 0);
-    }
+        // attach artwork if user has picked one
+        if (mArtwork != null) {
+            intent.putExtra("com.soundcloud.android.extra.artwork", Uri.fromFile(mArtwork));
+        }
 
-    @Override public Record getLastNonConfigurationInstance() {
-        return (Record) super.getLastNonConfigurationInstance();
-    }
-
-    @Override public Record onRetainNonConfigurationInstance() {
-        return this;
-    }
-
-    // callback gets executed when the SoundCloud app returns
-    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (resultCode == RESULT_OK) {
-            Toast.makeText(this, "Shared", Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(this, "Canceled", Toast.LENGTH_SHORT).show();
+        try {
+            startActivityForResult(intent, SHARE_SOUND);
+        } catch (ActivityNotFoundException notFound) {
+            // use doesn't have SoundCloud app installed, show a dialog box
+            showDialog(DIALOG_NOT_INSTALLED);
         }
     }
 
-    private MediaRecorder getRecorder(File path) {
+
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            case SHARE_SOUND:
+                // callback gets executed when the SoundCloud app returns
+                if (resultCode == RESULT_OK) {
+                    Toast.makeText(this, R.string.shared_ok, Toast.LENGTH_SHORT).show();
+                } else {
+                    // canceled
+                    Toast.makeText(this, R.string.shared_canceled, Toast.LENGTH_SHORT).show();
+                }
+                break;
+
+            case PICK_ARTWORK:
+                if (resultCode == RESULT_OK) {
+                    mArtwork = getFromMediaUri(getContentResolver(), data.getData());
+                }
+                break;
+        }
+    }
+
+    private MediaRecorder getRecorder(File path, boolean useAAC) {
         MediaRecorder recorder = new MediaRecorder();
         recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
 
-         if (Build.VERSION.SDK_INT >= 8) {
+         if (useAAC) {
              recorder.setAudioSamplingRate(44100);
              recorder.setAudioEncodingBitRate(96000);
              recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
@@ -149,5 +215,60 @@ public class Record extends Activity {
             throw new RuntimeException(e);
         }
         return recorder;
+    }
+
+    // just get the last known location from the passive provider - not terribly
+    // accurate but it's a demo app.
+    private Location getLocation() {
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        return locationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
+    }
+
+    @Override public Record getLastNonConfigurationInstance() {
+        return (Record) super.getLastNonConfigurationInstance();
+    }
+
+    @Override public Record onRetainNonConfigurationInstance() {
+        return this;
+    }
+
+    // Helper method to get file from a content uri
+    private static File getFromMediaUri(ContentResolver resolver, Uri uri) {
+        String[] filePathColumn = { MediaStore.MediaColumns.DATA };
+        Cursor cursor = resolver.query(uri, filePathColumn, null, null, null);
+        if (cursor != null) {
+            try {
+                if (cursor.moveToFirst()) {
+                    int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+                    String filePath = cursor.getString(columnIndex);
+                    return new File(filePath);
+                }
+            } finally {
+                cursor.close();
+            }
+        }
+        return null;
+    }
+
+    @Override
+    protected Dialog onCreateDialog(int id, Bundle data) {
+        if (DIALOG_NOT_INSTALLED == id) {
+            return new AlertDialog.Builder(this)
+                    .setTitle(R.string.sc_app_not_found)
+                    .setMessage(R.string.sc_app_not_found_message)
+                    .setPositiveButton(android.R.string.yes, new Dialog.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            Intent market = new Intent(Intent.ACTION_VIEW, MARKET_URI);
+                            startActivity(market);
+                        }
+                    })
+                    .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.cancel();
+                        }
+                    }).create();
+        } else {
+            return null;
+        }
     }
 }
