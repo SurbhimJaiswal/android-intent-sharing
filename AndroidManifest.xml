@@ -16,6 +16,9 @@
         </activity>
     </application>
 
+    <supports-screens android:anyDensity="true" />
+    <uses-sdk android:minSdkVersion="7" android:targetSdkVersion="10"/>
+
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
