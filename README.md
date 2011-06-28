@@ -24,5 +24,22 @@ The integration works with the standard [Android intent model][]:
     }
 
 
+## Intent extras
+
+The following extras can be set on the intent to set the metadata of the
+uploaded track (all expcept the first need to be prefixed with `com.soundcloud.android.extra`)
+
+  * android.intent.extra.STREAM (`android.net.Uri`) - the audio data to be
+  uploaded (needs to have the `file` schema)
+  * title (`String`) the title of the track
+  * where (`String`) the location of the recording
+  * description (`String`)
+  * public (`boolean`) if the track should be public or not
+  * location (`android.location.Location`) the location
+  * tags (`String[]`) tags for the track
+  * genre (`String`)
+  * artwork (`android.net.Uri`) artwork to use for this track (needs to be
+  `file` schema)
+
 
 [Android intent model]: http://developer.android.com/reference/android/content/Intent.html
