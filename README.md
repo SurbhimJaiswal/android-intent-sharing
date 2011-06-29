@@ -41,5 +41,13 @@ uploaded track (all except the first need to be prefixed with `com.soundcloud.an
   * artwork (`android.net.Uri`) artwork to use for this track (needs to be
   `file` schema)
 
+## I need more control over how the file is uploaded!
+
+The share intent tries to cover the basic use cases but sometimes you just want
+to do things differently, or you need access to other API features.
+
+In this case check out the [Android token sharing][] sample project which
+demonstrates how to obtain a token and talk to the SoundCloud API directly.
 
 [Android intent model]: http://developer.android.com/reference/android/content/Intent.html
+[Android token sharing]: https://github.com/soundcloud/android-token-sharing
