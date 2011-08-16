@@ -41,6 +41,21 @@ uploaded track (all except the first need to be prefixed with `com.soundcloud.an
   * artwork (`android.net.Uri`) artwork to use for this track (needs to be
   `file` schema)
 
+## Preserving your app's client id
+
+Because the upload is handled by an external application (the official SoundCloud app) you might want
+to pass in the client id of the calling app. At the moment this is done by adding the machine tag
+`"soundcloud:created-with-client-id=your-apps-client-id` to the metadata:
+
+    String clientId = "my_client_id";
+    Intent intent = new Intent("com.soundcloud.android.SHARE")
+        .putExtra("com.soundcloud.android.extra.tags", new String[] {
+            "soundcloud:created-with-client-id="+clientId
+        });
+
+See the method `shareSound()` in `Record.java` for an example. You can verify that all machine tags
+are set correctly by going to the track edit page ([track tags screenshot][]).
+
 ## I need more control over how the file is uploaded!
 
 The share intent tries to cover the basic use cases but sometimes you just want
@@ -51,3 +66,4 @@ demonstrates how to obtain a token and talk to the SoundCloud API directly.
 
 [Android intent model]: http://developer.android.com/reference/android/content/Intent.html
 [Android token sharing]: https://github.com/soundcloud/android-token-sharing
+[track tags screenshot]: http://cl.ly/3b050S2L2w071m311P1m

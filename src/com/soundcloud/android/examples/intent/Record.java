@@ -48,6 +48,10 @@ public class Record extends Activity {
     private static final Uri MARKET_URI = Uri.parse("market://details?id=com.soundcloud.android");
     private static final int DIALOG_NOT_INSTALLED = 0;
 
+    // Replace with the client id of your registered app!
+    // see http://soundcloud.com/you/apps/
+    private static final String CLIENT_ID = "fecfc092de134a960dc48e53c044ee91";
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -143,6 +147,8 @@ public class Record extends Activity {
         }
     }
 
+
+    // the actual sharing happens here
     private void shareSound() {
         Intent intent = new Intent("com.soundcloud.android.SHARE")
                 .putExtra(Intent.EXTRA_STREAM, Uri.fromFile(RECORDING))
@@ -151,10 +157,13 @@ public class Record extends Activity {
                 .putExtra("com.soundcloud.android.extra.where", "Somewhere")
                 .putExtra("com.soundcloud.android.extra.description", "This is a demo track.")
                 .putExtra("com.soundcloud.android.extra.public", true)
-                .putExtra("com.soundcloud.android.extra.tags", new String[] { "demo", "post lolcat bluez"} )
+                .putExtra("com.soundcloud.android.extra.tags", new String[] {
+                    "demo",
+                    "post lolcat bluez",
+                    "soundcloud:created-with-client-id="+CLIENT_ID
+                 })
                 .putExtra("com.soundcloud.android.extra.genre", "Easy Listening")
-                .putExtra("com.soundcloud.android.extra.location", getLocation())
-                ;
+                .putExtra("com.soundcloud.android.extra.location", getLocation());
 
         // attach artwork if user has picked one
         if (mArtwork != null) {
