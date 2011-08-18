@@ -8,6 +8,8 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.location.Location;
 import android.location.LocationManager;
@@ -55,6 +57,7 @@ public class Record extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
 
         if (Environment.MEDIA_MOUNTED.equals(
             Environment.getExternalStorageState())) {
@@ -133,6 +136,10 @@ public class Record extends Activity {
                 startActivityForResult(new Intent(Intent.ACTION_GET_CONTENT).setType("image/*"), PICK_ARTWORK);
             }
         });
+
+        if (!isCompatibleSoundCloudInstalled()) {
+            showDialog(DIALOG_NOT_INSTALLED);
+        }
     }
 
     private void play(MediaPlayer.OnCompletionListener onCompletion) {
@@ -261,6 +268,20 @@ public class Record extends Activity {
             }
         }
         return null;
+    }
+
+
+    private boolean isCompatibleSoundCloudInstalled() {
+        try {
+            PackageInfo info = getPackageManager().getPackageInfo("com.soundcloud.android",
+                    PackageManager.GET_META_DATA);
+
+            // intent sharing only got introduced with version 22
+            return info != null && info.versionCode >= 22;
+        } catch (PackageManager.NameNotFoundException e) {
+            // not installed at all
+            return false;
+        }
     }
 
     @Override
