@@ -137,7 +137,7 @@ public class Record extends Activity {
             }
         });
 
-        if (!isCompatibleSoundCloudInstalled()) {
+        if (!isCompatibleSoundCloudInstalled(this)) {
             showDialog(DIALOG_NOT_INSTALLED);
         }
     }
@@ -271,9 +271,10 @@ public class Record extends Activity {
     }
 
 
-    private boolean isCompatibleSoundCloudInstalled() {
+    private static boolean isCompatibleSoundCloudInstalled(Context context) {
         try {
-            PackageInfo info = getPackageManager().getPackageInfo("com.soundcloud.android",
+            PackageInfo info = context.getPackageManager()
+                                      .getPackageInfo("com.soundcloud.android",
                     PackageManager.GET_META_DATA);
 
             // intent sharing only got introduced with version 22
